@@ -2,11 +2,14 @@ from tkinter import ttk
 
 from datetime import datetime
 
-from util import Engine, Receipt, Product
+from back import Engine, Receipt, Product
 from util.windows.SingleWindow import generate_window_function
 
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from tkinter import *
+
+from decimal import Decimal
 
 
 @generate_window_function
@@ -81,13 +84,24 @@ def receipt_entry(entry_window, close_window):
     rec_total_label.grid(row=1, column=0, sticky="W")
     rec_bonus_label = ttk.Label(receipt_frame, text="Bonus: ")
     rec_bonus_label.grid(row=2, column=0, sticky="W")
+    rec_store_label = ttk.Label(receipt_frame, text="Store: ")
+    rec_store_label.grid(row=3, column=0, sticky="W")
 
     rec_date = ttk.Entry(receipt_frame, textvariable=StringVar(), width=10)
-    rec_date.grid(row=0, column=1, sticky="E")
+    rec_date.grid(row=0, column=1, sticky="W")
     rec_total = ttk.Entry(receipt_frame, textvariable=DoubleVar(), width=10)
-    rec_total.grid(row=1, column=1, sticky="E")
+    rec_total.grid(row=1, column=1, sticky="W")
     rec_bonus = ttk.Entry(receipt_frame, textvariable=DoubleVar(), width=10)
-    rec_bonus.grid(row=2, column=1, sticky="E")
+    rec_bonus.grid(row=2, column=1, sticky="W")
+
+    with Session(Engine) as session:
+        store_names = session.execute(text("SELECT DISTINCT store FROM receipt;"))
+
+    store_names = [str(store[0]) for store in store_names]
+    store_names.sort(reverse=False)
+
+    rec_store = ttk.Combobox(receipt_frame, textvariable=StringVar(), width=30, values=store_names)
+    rec_store.grid(row=3, column=1, sticky="W")
 
     correct_date = StringVar()
     correct_date.set('Use format YYYY-MM-DD')
@@ -115,8 +129,16 @@ def receipt_entry(entry_window, close_window):
     product_total_label = ttk.Label(new_product_frame, text="Total:")
     product_total_label.grid(row=4, column=0, sticky="W")
     ### New Product Entry boxes
-    prod_name = ttk.Entry(new_product_frame, textvariable=StringVar(), width=20)
+    with Session(Engine) as session:
+        product_names = session.execute(text("SELECT DISTINCT name FROM product;"))
+
+    product_names = [prod_name[0] for prod_name in product_names]
+    product_names.sort(reverse=False)
+
+    prod_name = ttk.Combobox(new_product_frame, textvariable=StringVar(), width=20, values=product_names)
     prod_name.grid(row=0, column=1, sticky="W")
+
+
     prod_price = ttk.Entry(new_product_frame, textvariable=DoubleVar(), width=8)
     prod_price.grid(row=1, column=1, sticky="W")
     prod_bonus = ttk.Entry(new_product_frame, textvariable=DoubleVar(), width=8)
@@ -159,12 +181,12 @@ def receipt_entry(entry_window, close_window):
 
         invalid_price = True
         try:
-            float(prod_price.get())
+            Decimal(prod_price.get())
         except ValueError:
             correct_prod_price.set("Price invalid")
             product_price_label.config(foreground="red")
         else:
-            if not (float(prod_price.get()) > 0):
+            if not (Decimal(prod_price.get()) > 0):
                 correct_prod_price.set("Price must be > 0")
                 product_price_label.config(foreground="red")
             else:
@@ -174,12 +196,12 @@ def receipt_entry(entry_window, close_window):
 
         invalid_bonus = True
         try:
-            float(prod_bonus.get())
+            Decimal(prod_bonus.get())
         except ValueError:
             correct_prod_bonus.set("Bonus invalid")
             product_bonus_label.config(foreground="red")
         else:
-            if float(prod_bonus.get()) < 0:
+            if Decimal(prod_bonus.get()) < 0:
                 correct_prod_bonus.set("Bonus must be >= 0")
                 product_bonus_label.config(foreground="red")
             else:
@@ -189,12 +211,12 @@ def receipt_entry(entry_window, close_window):
 
         invalid_total = True
         try:
-            float(prod_total.get())
+            Decimal(prod_total.get())
         except ValueError:
             correct_prod_total.set("Total invalid")
             product_total_label.config(foreground="red")
         else:
-            if not (float(prod_total.get()) > 0):
+            if not (Decimal(prod_total.get()) > 0):
                 correct_prod_total.set("Total must be > 0")
                 product_total_label.config(foreground="red")
             else:
@@ -220,7 +242,7 @@ def receipt_entry(entry_window, close_window):
         if any([invalid_bonus, invalid_total, invalid_price, invalid_quant]):
             return False
 
-        if (float(prod_price.get()) * int(prod_quantity.get())) - float(prod_bonus.get()) != float(prod_total.get()):
+        if (Decimal(prod_price.get()) * Decimal(prod_quantity.get())) - Decimal(prod_bonus.get()) != Decimal(prod_total.get()):
             general_prod_problem.set("(Price * Quantity) - Bonus =/= Total")
             general_prod_problem_label.config(foreground="red")
             return False
@@ -252,12 +274,12 @@ def receipt_entry(entry_window, close_window):
 
         invalid_rec_total = True
         try:
-            float(rec_total.get())
+            Decimal(rec_total.get())
         except ValueError:
             correct_total.set('Total invalid')
             rec_total_label.config(foreground='red')
         else:
-            if not (float(rec_total.get()) >= 0):
+            if not (Decimal(rec_total.get()) >= 0):
                 correct_total.set('Total must be >= 0')
                 rec_total_label.config(foreground='red')
             else:
@@ -267,12 +289,12 @@ def receipt_entry(entry_window, close_window):
 
         invalid_rec_bonus = True
         try:
-            float(rec_bonus.get())
+            Decimal(rec_bonus.get())
         except ValueError:
             correct_bonus.set("Bonus invalid")
             rec_bonus_label.config(foreground="red")
         else:
-            if not (float(rec_bonus.get()) >= 0):
+            if not (Decimal(rec_bonus.get()) >= 0):
                 correct_bonus.set("Bonus must be >= 0")
                 rec_bonus_label.config(foreground="red")
             else:
@@ -283,8 +305,8 @@ def receipt_entry(entry_window, close_window):
         if any([invalid_rec_bonus, invalid_rec_total]):
             return False
 
-        total_amount = sum(list(map(lambda x: x['values'][4], [prod_tree.item(id) for id in prod_tree.get_children()])))
-        if rec_total.get() == total_amount:
+        total_amount = sum(list(map(Decimal, map(lambda x: x['values'][4], [prod_tree.item(id) for id in prod_tree.get_children()]))))
+        if Decimal(rec_total.get()) == total_amount:
             correct_total.set('')
             rec_total_label.config(foreground='green')
             res.append(True)
@@ -293,9 +315,9 @@ def receipt_entry(entry_window, close_window):
             rec_total_label.config(foreground='red')
             res.append(False)
 
-        total_bonus = sum(list(map(lambda x: x['values'][2], [prod_tree.item(id) for id in prod_tree.get_children()])))
-        if rec_bonus.get() == total_bonus:
-            correct_total.set('')
+        total_bonus = sum(list(map(Decimal, map(lambda x: x['values'][2], [prod_tree.item(id) for id in prod_tree.get_children()]))))
+        if Decimal(rec_bonus.get()) == total_bonus:
+            correct_bonus.set('')
             rec_bonus_label.config(foreground='green')
             res.append(True)
         else:
@@ -312,21 +334,29 @@ def receipt_entry(entry_window, close_window):
         rec_list = []
 
         for item in [prod_tree.item(id) for id in prod_tree.get_children()]:
-            rec_list.append(Product(name=str(item['values'][0]), price=float(item['values'][1]),
-                                    bonus=float(item['values'][2]), quantity=int(item['values'][3])))
+            rec_list.append(Product(name=str(item['values'][0]), price=Decimal(item['values'][1]),
+                                    bonus=Decimal(item['values'][2]), quantity=int(item['values'][3])))
 
-        res_list = rec_list[:]
-        res_list.append(Receipt(date=str(rec_date.get()), bonus=float(rec_bonus.get()), total=float(rec_total.get()),
-                                products=rec_list))
+        receipt = Receipt(date=str(rec_date.get()), bonus=Decimal(rec_bonus.get()), total=Decimal(rec_total.get()),
+                          store=rec_store.get(), products=rec_list)
 
         with Session(Engine) as session:
-            session.add_all(res_list)
+            session.add(receipt)
             session.commit()
 
-        close_window()
+        prod_tree.delete(*prod_tree.get_children())
 
     def next_receipt():
-        ...
+        add_receipt()
+
+        correct_prod_name.set('')
+        correct_prod_price.set('Price incorrect')
+        correct_prod_bonus.set('Bonus incorrect')
+        correct_prod_quant.set('Quantity incorrect')
+        correct_prod_total.set('Total incorrect')
+        correct_date.set('Use format YYYY-MM-DD')
+        correct_total.set('Items are missing!')
+        correct_bonus.set('Bonus incorrect')
 
     ttk.Button(button_frame, command=add_entry, text="Add Product").grid(row=0, column=0, sticky="W")
     ttk.Button(button_frame, command=check_entry, text="Check Product").grid(row=0, column=1, sticky="W")

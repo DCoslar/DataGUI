@@ -23,10 +23,11 @@ def generate_window_function(func):
                                 when using the decorated function. The function to open the new window will be returned.
     """
 
-    def generate_new_window(root):
+    def generate_new_window(root, diff_func):
         """Decorator for new windows. Includes forced single existence and correct closing.
 
         :param root: Window from which sub-window should be spawned.
+        :param diff_func: function to be executed after the window has been destroyed.
         :return: Function to be called when the new window should be opened.
         """
 
@@ -44,7 +45,11 @@ def generate_window_function(func):
                 nonlocal NEW_ENTRY_WINDOW_OPEN
                 NEW_ENTRY_WINDOW_OPEN = False
 
+                nonlocal diff_func
+                diff_func()
+
                 entry_window.destroy()
+
 
             entry_window.protocol("WM_DELETE_WINDOW", close_window)
 

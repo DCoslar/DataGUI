@@ -5,6 +5,7 @@ from sqlalchemy.orm import declarative_base
 from datetime import datetime
 
 from enum import Enum
+from decimal import Decimal
 
 Base = declarative_base()
 
@@ -16,6 +17,7 @@ class Receipt(Base):
     _date = Column(String(10), nullable=False)
     _bonus = Column(Integer, nullable=False)
     _total = Column(Integer, nullable=False)
+    store = Column(String(30), nullable=True)
 
     products = relationship(
         "Product", back_populates="receipt", cascade="all, delete-orphan"
@@ -32,24 +34,24 @@ class Receipt(Base):
         return round(self._total/100, 2)
 
     @total.setter
-    def total(self, new_val: float):
-        if isinstance(new_val, float):
+    def total(self, new_val: Decimal):
+        if isinstance(new_val, Decimal):
             self._total = int(new_val*100)
 
         else:
-            raise TypeError("total needs to be a float!")
+            raise TypeError("total needs to be a Decimal!")
 
     @property
     def bonus(self):
         return round(self._bonus/100, 2)
 
     @bonus.setter
-    def bonus(self, new_val: float):
-        if isinstance(new_val, float):
+    def bonus(self, new_val: Decimal):
+        if isinstance(new_val, Decimal):
             self._bonus = int(new_val*100)
 
         else:
-            raise TypeError("bonus needs to be a float!")
+            raise TypeError("bonus needs to be a Decimal!")
 
     @property
     def date(self):
@@ -84,11 +86,11 @@ class Product(Base):
 
     @price.setter
     def price(self, new_val):
-        if isinstance(new_val, float):
+        if isinstance(new_val, Decimal):
             self._price = int(new_val*100)
 
         else:
-            raise TypeError("price needs to be a float!")
+            raise TypeError("price needs to be a Decimal!")
 
     @property
     def bonus(self):
@@ -96,11 +98,11 @@ class Product(Base):
 
     @bonus.setter
     def bonus(self, new_val):
-        if isinstance(new_val, float):
+        if isinstance(new_val, Decimal):
             self._bonus = int(new_val*100)
 
         else:
-            raise TypeError("bonus needs to be a float!")
+            raise TypeError("bonus needs to be a Decimal!")
 
 
 class RecIds(Enum):
